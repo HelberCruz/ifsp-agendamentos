@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="IFSP Agendamentos">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="ifsp_agendamentos">
+  <link rel="manifest" href="manifest.json">
+  <title>ifsp_agendamentos</title>
+</head>
+<body>
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyA4Uv51cCALbn8nCIrietTJq3NB8IBKFTI",
+    authDomain: "ifsp-agendamento.firebaseapp.com",
+    projectId: "ifsp-agendamento",
+    storageBucket: "ifsp-agendamento.firebasestorage.app",
+    messagingSenderId: "531249726",
+    appId: "1:531249726:web:404a2c366c62db8c5def6f",
+    measurementId: "G-1DGHJ9E7Z2"
+  };
+
+  initializeApp(firebaseConfig);
+</script>
+
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
