@@ -1,6 +1,6 @@
 // lib/app_colors.dart
 import 'package:flutter/material.dart';
-
+// Arquivo utilizado na estilização das paginas, com cores ja definidas esperando para serem mportadas e suadas na paginação
 class AppColors {
   static const Color primary = Color(0xFF2196F3);
   static const Color primaryDark = Color(0xFF1976D2);

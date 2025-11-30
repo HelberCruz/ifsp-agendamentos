@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
-
+// informações necessarias para fazer o registro dos cadastros no banco de dados, seja o cadastro de usuario ou agendamento
+// juntamente da chave da API utilizada nesse processo
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     return const FirebaseOptions(

@@ -4,8 +4,10 @@ import '../services/agendamento_service.dart';
 import '../models/agendamento.dart';
 import '../app_colors.dart';
 
+// Lista de salas disponíveis para agendamento
 const SALAS = ['Estúdio', 'LAB Maker', 'Quadra'];
 
+// Tela para criar novo agendamento
 class CreatePage extends StatefulWidget {
   const CreatePage({super.key});
   @override
@@ -13,14 +15,16 @@ class CreatePage extends StatefulWidget {
 }
 
 class _CreatePageState extends State<CreatePage> {
-  String _sala = SALAS[0];
-  DateTime? _date;
-  TimeOfDay? _start;
-  TimeOfDay? _end;
-  final _title = TextEditingController();
-  final _desc = TextEditingController();
-  bool _loading = false;
+  // Variáveis de estado do formulário
+  String _sala = SALAS[0]; // Sala selecionada (padrão: primeira da lista)
+  DateTime? _date; // Data selecionada
+  TimeOfDay? _start; // Horário de início
+  TimeOfDay? _end; // Horário de fim
+  final _title = TextEditingController(); // Controlador para campo título
+  final _desc = TextEditingController(); // Controlador para campo descrição
+  bool _loading = false; // Estado de carregamento durante o salvamento
 
+  // Método para selecionar data
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final d = await showDatePicker(
@@ -31,27 +35,31 @@ class _CreatePageState extends State<CreatePage> {
     if (d != null) {
       setState(() {
         _date = d;
-        _start = null;
+        _start = null; // Reseta horários quando muda a data
         _end = null;
       });
     }
   }
 
+  // Método para selecionar horário de início
   Future<void> _pickStart() async {
     final t = await showTimePicker(
         context: context, initialTime: const TimeOfDay(hour: 8, minute: 0));
     if (t != null) {
       setState(() => _start = t);
+      // Se horário final for anterior ao novo início, reseta horário final
       if (_end != null && _isStartAfterEnd(t, _end!)) {
         setState(() => _end = null);
       }
     }
   }
 
+  // Método para selecionar horário de fim
   Future<void> _pickEnd() async {
     final t = await showTimePicker(
         context: context, 
         initialTime: _start ?? const TimeOfDay(hour: 9, minute: 0));
+    // Só permite selecionar se início já foi definido e horário é válido
     if (t != null && _start != null && !_isStartAfterEnd(_start!, t)) {
       setState(() => _end = t);
     } else if (_start == null) {
@@ -61,14 +69,18 @@ class _CreatePageState extends State<CreatePage> {
     }
   }
 
+  // Verifica se horário de início é depois do horário de fim
   bool _isStartAfterEnd(TimeOfDay start, TimeOfDay end) {
     return start.hour > end.hour || (start.hour == end.hour && start.minute >= end.minute);
   }
 
+  // Combina DateTime (data) com TimeOfDay (horário) em um único DateTime
   DateTime? _combine(DateTime d, TimeOfDay t) =>
       DateTime(d.year, d.month, d.day, t.hour, t.minute);
 
+  // Método para salvar o agendamento
   void _save() async {
+    // Validação dos campos obrigatórios
     if (_date == null ||
         _start == null ||
         _end == null ||
@@ -78,9 +90,11 @@ class _CreatePageState extends State<CreatePage> {
       return;
     }
 
+    // Combina data com horários
     final inicio = _combine(_date!, _start!)!;
     final fim = _combine(_date!, _end!)!;
 
+    // Valida se horário final é depois do inicial
     if (!fim.isAfter(inicio)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Horário final deve ser depois do inicial')));
@@ -89,39 +103,46 @@ class _CreatePageState extends State<CreatePage> {
 
     setState(() => _loading = true);
 
+    // Obtém dados do usuário logado
     final user = FirebaseAuth.instance.currentUser;
+    
+    // Cria objeto Agendamento
     final a = Agendamento(
-        id: '',
+        id: '', // ID vazio (será gerado pelo Firebase)
         sala: _sala,
         titulo: _title.text.trim(),
         descricao: _desc.text.trim(),
-        usuario: user?.displayName ?? user?.email ?? 'Usuário',
-        usuarioEmail: user?.email ?? 'anon',
-        usuarioUid: user?.uid ?? 'unknown',
+        usuario: user?.displayName ?? user?.email ?? 'Usuário', // Nome ou email
+        usuarioEmail: user?.email ?? 'anon', // Email do usuário
+        usuarioUid: user?.uid ?? 'unknown', // UID do usuário
         inicio: inicio,
         fim: fim);
 
     try {
+      // Salva agendamento no Firebase
       await AgendamentoService.add(a);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('Agendamento criado com sucesso!'),
             backgroundColor: Colors.green));
-        Navigator.pop(context);
+        Navigator.pop(context); // Volta para tela anterior
       }
     } catch (e) {
+      // Trata erros no salvamento
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Erro: ${e.toString()}'),
             backgroundColor: Colors.red));
       }
     } finally {
+      // Garante que loading seja desativado
       if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   void dispose() {
+    // Limpa os controladores para evitar vazamento de memória
     _title.dispose();
     _desc.dispose();
     super.dispose();
@@ -129,6 +150,7 @@ class _CreatePageState extends State<CreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Formata textos para exibição
     final dateStr = _date == null
         ? 'Selecionar data'
         : '${_date!.day}/${_date!.month}/${_date!.year}';
@@ -147,7 +169,7 @@ class _CreatePageState extends State<CreatePage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Card Principal
+              // Card Principal do formulário
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -165,7 +187,7 @@ class _CreatePageState extends State<CreatePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sala
+                    // Seção de Seleção de Sala
                     Text(
                       'Sala',
                       style: TextStyle(
@@ -184,8 +206,8 @@ class _CreatePageState extends State<CreatePage> {
                       ),
                       child: DropdownButton<String>(
                         value: _sala,
-                        isExpanded: true,
-                        underline: const SizedBox(),
+                        isExpanded: true, // Ocupa toda a largura
+                        underline: const SizedBox(), // Remove linha padrão
                         items: SALAS
                             .map((s) => DropdownMenuItem(
                                   value: s,
@@ -197,7 +219,7 @@ class _CreatePageState extends State<CreatePage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Título
+                    // Campo de Título
                     Text(
                       'Título do Agendamento',
                       style: TextStyle(
@@ -224,7 +246,7 @@ class _CreatePageState extends State<CreatePage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Descrição
+                    // Campo de Descrição (Opcional)
                     Text(
                       'Descrição (Opcional)',
                       style: TextStyle(
@@ -242,7 +264,7 @@ class _CreatePageState extends State<CreatePage> {
                       ),
                       child: TextField(
                         controller: _desc,
-                        maxLines: 3,
+                        maxLines: 3, // Campo maior para descrição
                         decoration: const InputDecoration(
                           hintText: 'Descreva o propósito do agendamento...',
                           border: InputBorder.none,
@@ -252,7 +274,7 @@ class _CreatePageState extends State<CreatePage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Data e Horário
+                    // Seção de Data e Horário
                     Text(
                       'Data e Horário',
                       style: TextStyle(
@@ -264,6 +286,7 @@ class _CreatePageState extends State<CreatePage> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
+                        // Botão para selecionar data
                         Expanded(
                           child: _buildTimeButton(
                             icon: Icons.calendar_today,
@@ -272,6 +295,7 @@ class _CreatePageState extends State<CreatePage> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // Botão para selecionar horário de início
                         Expanded(
                           child: _buildTimeButton(
                             icon: Icons.access_time,
@@ -280,6 +304,7 @@ class _CreatePageState extends State<CreatePage> {
                           ),
                         ),
                         const SizedBox(width: 12),
+                        // Botão para selecionar horário de fim
                         Expanded(
                           child: _buildTimeButton(
                             icon: Icons.access_time,
@@ -295,12 +320,12 @@ class _CreatePageState extends State<CreatePage> {
 
               const SizedBox(height: 24),
 
-              // Botão Salvar
+              // Botão de Salvar
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: _loading ? null : _save,
+                  onPressed: _loading ? null : _save, // Desabilita durante loading
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
@@ -339,6 +364,7 @@ class _CreatePageState extends State<CreatePage> {
     );
   }
 
+  // Widget reutilizável para botões de data/horário
   Widget _buildTimeButton({
     required IconData icon,
     required String text,
@@ -351,7 +377,7 @@ class _CreatePageState extends State<CreatePage> {
         foregroundColor: AppColors.primary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.grey[300]!),
+          side: BorderSide(color: Colors.grey[300]!), // Borda cinza
         ),
         padding: const EdgeInsets.symmetric(vertical: 12),
       ),

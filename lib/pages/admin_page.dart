@@ -5,22 +5,26 @@ import '../services/auth_service.dart';
 import '../models/agendamento.dart';
 import '../app_colors.dart';
 
+// Tela administrativa para gerenciar agendamentos
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
   @override State<AdminPage> createState() => _AdminPageState();
 }
 
 class _AdminPageState extends State<AdminPage> {
-  late final Stream<List<Agendamento>> _stream;
-  String _userLevel = 'user';
+  late final Stream<List<Agendamento>> _stream; // Stream para receber agendamentos em tempo real
+  String _userLevel = 'user'; // Nível de acesso do usuário
 
   @override
   void initState() {
     super.initState();
+    // Inicializa o stream com todos os agendamentos do Firebase
     _stream = AgendamentoService.streamAllAgendamentos();
+    // Carrega o nível de acesso do usuário atual
     _loadUserLevel();
   }
 
+  // Método para verificar se usuário tem permissão de admin
   void _loadUserLevel() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -29,9 +33,11 @@ class _AdminPageState extends State<AdminPage> {
     }
   }
 
+  // Método para cancelar agendamento como administrador
   void _cancelarAgendamentoAdmin(Agendamento a) async {
-    final motivoController = TextEditingController();
+    final motivoController = TextEditingController(); // Controlador para campo de motivo
     
+    // Diálogo de confirmação de cancelamento
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -42,6 +48,7 @@ class _AdminPageState extends State<AdminPage> {
             Text('Agendamento: ${a.titulo}'),
             Text('Usuário: ${a.usuarioEmail}'),
             const SizedBox(height: 16),
+            // Campo para inserir motivo do cancelamento
             TextField(
               controller: motivoController,
               decoration: const InputDecoration(
@@ -53,12 +60,15 @@ class _AdminPageState extends State<AdminPage> {
           ],
         ),
         actions: [
+          // Botão para cancelar a ação
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
+          // Botão para confirmar cancelamento
           ElevatedButton(
             onPressed: () async {
+              // Valida se motivo foi preenchido
               if (motivoController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Informe o motivo do cancelamento')),
@@ -67,13 +77,16 @@ class _AdminPageState extends State<AdminPage> {
               }
 
               try {
+                // Obtém UID do admin logado
                 final adminUid = FirebaseAuth.instance.currentUser!.uid;
+                // Chama serviço para cancelar agendamento
                 await AgendamentoService.cancelarAgendamentoAdmin(
                   a.id, 
                   adminUid, 
                   motivoController.text.trim()
                 );
                 
+                // Fecha diálogo e mostra confirmação
                 if (mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -81,6 +94,7 @@ class _AdminPageState extends State<AdminPage> {
                   );
                 }
               } catch (e) {
+                // Trata erros no cancelamento
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
@@ -97,6 +111,7 @@ class _AdminPageState extends State<AdminPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Verifica se usuário não é admin - mostra tela de acesso restrito
     if (_userLevel != 'admin') {
       return Scaffold(
         appBar: AppBar(
@@ -126,6 +141,7 @@ class _AdminPageState extends State<AdminPage> {
       );
     }
 
+    // Tela principal do admin
     return Scaffold(
       appBar: AppBar(
         title: const Text('Painel Administrativo'),
@@ -133,13 +149,16 @@ class _AdminPageState extends State<AdminPage> {
         foregroundColor: Colors.white,
       ),
       backgroundColor: AppColors.background,
+      // StreamBuilder para atualizar lista em tempo real
       body: StreamBuilder<List<Agendamento>>(
         stream: _stream,
         builder: (context, snap) {
+          // Mostra loading enquanto carrega dados
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
+          // Trata erros no stream
           if (snap.hasError) {
             return Center(
               child: Column(
@@ -153,13 +172,15 @@ class _AdminPageState extends State<AdminPage> {
             );
           }
 
+          // Processa dados recebidos
           final items = snap.data ?? [];
+          // Separa agendamentos ativos e cancelados
           final agendamentosAtivos = items.where((a) => a.isAtivo).toList();
           final agendamentosCancelados = items.where((a) => !a.isAtivo).toList();
 
           return Column(
             children: [
-              // Header Stats
+              // Cabeçalho com estatísticas
               Container(
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.all(20),
@@ -193,12 +214,13 @@ class _AdminPageState extends State<AdminPage> {
                 ),
               ),
 
-              // Tabs
+              // Abas para agendamentos ativos e cancelados
               Expanded(
                 child: DefaultTabController(
                   length: 2,
                   child: Column(
                     children: [
+                      // Container das abas
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
@@ -225,12 +247,13 @@ class _AdminPageState extends State<AdminPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // Conteúdo das abas
                       Expanded(
                         child: TabBarView(
                           children: [
-                            // ABA ATIVOS
+                            // ABA ATIVOS - mostra lista de agendamentos ativos
                             _buildAgendamentosList(agendamentosAtivos, true),
-                            // ABA CANCELADOS
+                            // ABA CANCELADOS - mostra lista de agendamentos cancelados
                             _buildAgendamentosList(agendamentosCancelados, false),
                           ],
                         ),
@@ -246,6 +269,7 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  // Widget para construir item de estatística no cabeçalho
   Widget _buildStatItem(String title, String value, IconData icon) {
     return Column(
       children: [
@@ -277,7 +301,9 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  // Widget para construir lista de agendamentos
   Widget _buildAgendamentosList(List<Agendamento> agendamentos, bool isAtivo) {
+    // Mensagem quando não há agendamentos
     if (agendamentos.isEmpty) {
       return Center(
         child: Column(
@@ -301,6 +327,7 @@ class _AdminPageState extends State<AdminPage> {
       );
     }
 
+    // Lista de agendamentos
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: agendamentos.length,
@@ -310,7 +337,7 @@ class _AdminPageState extends State<AdminPage> {
           margin: const EdgeInsets.only(bottom: 12),
           child: Card(
             elevation: 2,
-            color: isAtivo ? Colors.white : Colors.grey[100],
+            color: isAtivo ? Colors.white : Colors.grey[100], // Cor diferente para cancelados
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
@@ -320,7 +347,7 @@ class _AdminPageState extends State<AdminPage> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: isAtivo ? AppColors.primary : Colors.grey,
+                  color: isAtivo ? AppColors.primary : Colors.grey, // Cor do ícone baseada no status
                   borderRadius: BorderRadius.circular(25),
                 ),
                 child: Icon(
@@ -333,29 +360,30 @@ class _AdminPageState extends State<AdminPage> {
                 a.titulo,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  decoration: isAtivo ? null : TextDecoration.lineThrough,
+                  decoration: isAtivo ? null : TextDecoration.lineThrough, // Risca texto se cancelado
                 ),
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 4),
-                  Text('🏢 ${a.sala}'),
-                  Text('👤 ${a.usuarioEmail}'),
-                  Text('📅 ${_formatDate(a.inicio)}'),
-                  Text('🕒 ${_formatTime(a.inicio)} → ${_formatTime(a.fim)}'),
-                  if (a.descricao.isNotEmpty) Text('📝 ${a.descricao}'),
-                  if (!isAtivo) ...[
+                  Text('🏢 ${a.sala}'), // Ícone e nome da sala
+                  Text('👤 ${a.usuarioEmail}'), // Ícone e email do usuário
+                  Text('📅 ${_formatDate(a.inicio)}'), // Ícone e data
+                  Text('🕒 ${_formatTime(a.inicio)} → ${_formatTime(a.fim)}'), // Ícone e horário
+                  if (a.descricao.isNotEmpty) Text('📝 ${a.descricao}'), // Descrição se existir
+                  if (!isAtivo) ...[ // Informações adicionais para cancelados
                     const SizedBox(height: 4),
                     Text(
                       'Status: ${a.status}',
                       style: TextStyle(color: AppColors.error, fontSize: 12),
                     ),
                     if (a.canceladoMotivo != null) 
-                      Text('Motivo: ${a.canceladoMotivo}'),
+                      Text('Motivo: ${a.canceladoMotivo}'), // Motivo do cancelamento
                   ],
                 ],
               ),
+              // Botão de cancelamento apenas para agendamentos ativos
               trailing: isAtivo
                   ? IconButton(
                       icon: Container(
@@ -377,10 +405,12 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  // Formata data para DD/MM/AAAA
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
+  // Formata hora para HH:MM
   String _formatTime(DateTime date) {
     return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }

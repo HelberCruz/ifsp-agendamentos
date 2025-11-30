@@ -123,6 +123,7 @@ class MyApp extends StatelessWidget {
         // Scaffold Background Color
         scaffoldBackgroundColor: AppColors.background,
       ),
+      // Responsavel por definir as rotas de cada interface
       initialRoute: '/',
       routes: {
         '/': (context) => const LoginPage(),
